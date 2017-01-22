@@ -2,7 +2,7 @@
 <?php
 	include 'config.php' ;
 	include 'functions.php' ;
-	include 'style.php' ;	
+	include 'style.php' ;	/*TESTS*/
 ?>
 
 <html>
