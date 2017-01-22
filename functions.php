@@ -77,9 +77,11 @@ function main_create_quotation() {
 	connect2db() ;
 	global $conn ;
 	global $client_arr ;
+	global $client_id ;
 	$client_arr=array() ;
+	$client_id=array() ;
 
-	$sql_cmd = "select name from client_info.customer_db WHERE invalid = 0" ;
+	$sql_cmd = "select customer_id ,name from client_info.customer_db WHERE invalid = 0" ;//select list
 
 	$result = mysql_query( $sql_cmd, $conn ) ;
 
@@ -88,12 +90,13 @@ function main_create_quotation() {
 	}
 
 	while( $row = mysql_fetch_array( $result, MYSQL_ASSOC ) ) {
-    	array_push($client_arr,$row['name']) ;
+    	array_push($client_arr,$row['name']) ; //get client name
+		array_push($client_id,$row['customer_id']) ; //get client id
 	}
 
 	echo "<select name=select_client>" ;
 	for ( $i=0 ; $i<sizeof($client_arr) ; $i++ ) {
-		echo "<option id='t' value='".$client_arr[$i]."'>".$client_arr[$i]."</option>" ;
+		echo "<option id='select_customer_id' value='".$client_id[$i]."'>".$client_arr[$i]."</option>" ;//sent custom id
 		//echo "<option value=$i>".$client_arr[$i]."</option>" ;
 	}
 	echo "</select>" ;
@@ -102,64 +105,90 @@ function main_create_quotation() {
 }
 
 //建立報價單時，要列出所有的產品選擇
-function quotation_products_list( $c ) {
+function quotation_products_list( $id ) {
 	connect2db() ;
 	global $conn ;
-	global $products_arr ;
-
-	$products_arr=array() ;
-	$sql_cmd = "select * from client_info.".$c ;	
-	$result = mysql_query( $sql_cmd, $conn ) ;
-
-	if( !$result ) {
-		$sql_cmd = "CREATE TABLE client_info.".$c." (total char(50), date text" ;
-		for ( $i=1 ; $i<=10 ; $i++ ) {
-			$sql_cmd = $sql_cmd.", product".$i." char(50), count".$i." char(50), price".$i." char(50)" ;
-		}
-		$sql_cmd = $sql_cmd.")" ;
+	global $client_arr ;
+	$client_arr=array() ;
+	global $products_name_arr ;
+	$products_name_arr=array() ;
+	global $products_item_id_arr ;
+	$products_item_id_arr=array() ;
+	global $products_price_arr ;
+	$products_price_arr=array() ;
+	global $products_currency_arr ;
+	$products_currency_arr=array() ;
+	
+	$sql_cmd = "select name from client_info.customer_db WHERE customer_id = ".$id." " ;	//select_client_name
+	$item_cmd = "select * from client_info.item_db WHERE invalid = 0" ;						//select_client_item
+	
+	$sql_cmd_result = mysql_query( $sql_cmd, $conn ) ;
+	$item_cmd_result = mysql_query( $item_cmd, $conn ) ;
+	
+	while( $row = mysql_fetch_array( $sql_cmd_result) ) {
+    	array_push($client_arr,$row['name']) ;					//get client name
 	}
-	$result = mysql_query( $sql_cmd, $conn ) ;
-	if( !$result ) {
-		die('Create Failed.  ' . mysql_error()) ;
+	while( $row = mysql_fetch_array( $item_cmd_result) ) {
+		array_push($products_name_arr,$row['name']) ; 			//get item name
+		array_push($products_item_id_arr,$row['item_id']) ; 	//get item id
+		array_push($products_price_arr,$row['price']) ; 		//get item price
+		array_push($products_currency_arr,$row['currency']) ;   //get item currency
 	}
-
-
 	$sql_cmd = "use products" ;
-	$result = mysql_query( $sql_cmd, $conn ) ;
+	$sql_cmd_result = mysql_query( $sql_cmd, $conn ) ;
 	$sql_cmd = "show tables" ;
-	$result = mysql_query( $sql_cmd, $conn ) ;
+	$sql_cmd_result = mysql_query( $sql_cmd, $conn ) ;
 
-	if( !$result ) {
+	if( !$sql_cmd_result ) {
 		die('Could not get data: ' . mysql_error()) ;
 	}
 
-	while( $row = mysql_fetch_array( $result, MYSQL_ASSOC ) ) {
-    	array_push($products_arr,$row['Tables_in_products']) ;
-	}
-
-
-	echo "<input type=text name=create_quotation_client value='$c' readonly>" ;
+	echo "<input type=text name=create_quotation_client value='".$client_arr[0]."' readonly >" ; //top input show client name
+	echo "<input type=hidden name=create_quotation_client_id value=".$id." >";
 
 	echo "<table border=1><tbody>" ;
-	for ( $i=1 ; $i<=10 ; $i++ ) {
-		echo "<tr><td>" ;
-
-		echo "<select name=select_product".$i.">" ;
-		echo "<option value='null'> － － － － </option>" ;
-		for ( $j=0 ; $j<sizeof($products_arr) ; $j++ ) {
-			echo "<option value='".$products_arr[$j]."'>".$products_arr[$j]."</option>" ;
-		}
-		echo "</select>" ;
+		echo "<tr>";
+		echo "<td>物品名稱</td>";
+		//echo "<td>建議售價</td>";
+		//echo "<td>幣值</td>";
+		echo "<td>數量</td>";
+		echo "<td>價格</td>";
+		echo "<td>小計</td>";
+		echo "</tr>" ;
 		
+	for ( $i=1 ; $i<=20 ; $i++ ) {
+		echo "<tr>" ;
+		echo "<td>" ;
+		echo "<select id= 'option".$i."' name=select_product".$i." onchange= myFunction".$i."() >" ;
+		echo "<option value='null'> － － － － </option>" ;
+		for ( $j=0 ; $j<sizeof($products_name_arr) ; $j++ ) 
+		{
+			echo "<option value='".$products_item_id_arr[$j]."'>".$products_name_arr[$j].",  建議售價 ".$products_currency_arr[$j]."$ ".$products_price_arr[$j]."</option>" ;
+		}
+		echo "</select>" ;	
 		echo "</td>" ;
-		echo "<td><input type=text name=count".$i." placeholder=數量></td>" ;
-		echo "<td><input type=text name=price".$i." placeholder=價格></td>" ;
+		
+		//echo "<td><input type=text name=adv_price readonly></td>" ; //建議售價
+		//echo "<td><input type=text name=currency readonly></td>" ; //幣值
+		echo "<td><input type=text name=count".$i." placeholder=數量></td>" ; //數量
+		echo "<td><input type=text id=price".$i." placeholder=價格></td>" ; //價格
+		echo "<td><input type=text name=total".$i." readonly></td>" ; //小計
 		echo "</tr>" ;
 	}
 	echo "</tbody></table>" ;
-
+	
+	/*echo "<script>";
+	for ( $i=1 ; $i<=20 ; $i++ ) 
+	{
+		echo "function myFunction".$i."() {";
+			echo "var x".$i." = document.getElementById('option".$i."').value;";
+			echo "document.getElementById('price".$i."').placeholder = document.getElementById('option".$i."').value;";
+			echo "alert(x".$i.") ;";
+		echo "}";
+	}
+	echo "</script>";*/
+	
 	echo "<button type=submit name=btm_sent_quotation_list id='btm_sent_quotation_list'>建立報價單</button>" ;
-
 }
 
 //儲存報價單
@@ -180,6 +209,12 @@ function save_quotation( $client, $quotation_arr ) {
 	$date = date('Y-m-d');
 
 	$sql_cmd = "insert into client_info.$client(total,date" ;
+	$sql_cmd = "insert into client_info.quotation_simple_db
+	(
+	)
+	value
+	(
+	)";
 	for( $i=1 ; $i<=sizeof($quotation_arr)/3 ; $i++ ) {
 		$sql_cmd = $sql_cmd.",product$i,count$i,price$i" ;
 	}

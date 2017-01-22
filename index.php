@@ -145,8 +145,8 @@
 		//接收 報價單要報價的產品及數量與單價，存到每個客戶的 table
 		$quotation_arr = array() ;
 		if(isset($_POST['btm_sent_quotation_list'])) {	
-			for ( $i=1 ; $i<=10 ; $i++ ) {
-				$client = $_POST['create_quotation_client'] ;
+			for ( $i=1 ; $i<=20 ; $i++ ) {
+				$client = $_POST['create_quotation_client_id'] ;
 				$product_tmp = $_POST['select_product'.$i] ;
 				$count_tmp = $_POST['count'.$i] ;
 				$price_tmp = $_POST['price'.$i] ;
@@ -160,6 +160,7 @@
 					//echo $product_tmp." ".$count_tmp." ".$price_tmp."<br/>" ;
 				}
 			}
+			echo "alert(x".$client.") ;";
 			save_quotation( $client, $quotation_arr) ;
 		}
 		
